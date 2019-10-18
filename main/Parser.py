@@ -1,7 +1,11 @@
+import re
+import copy
+
+
 class ArgsParser(object):
-    def __init__(self):
-        self.args_dict = {}
+    def __init__(self, command):
         self._schema = None
+        self._command = Command(command)
 
     @property
     def schema(self):
@@ -13,34 +17,51 @@ class ArgsParser(object):
             raise TypeError("expected a string")
         self._schema = Schema(schema_as_text)
 
-    def _check_arg_type(self, arg):
-        if self.schema is None:
-            raise ValueError("please set schema")
-        if len(arg) == 1:
-            arg_name = arg
-            arg_type = self.schema.get_type(arg)
-            val = ''
-        else:
-            arg_name, val = arg.split(" ")
-            arg_type = self.schema.get_type(arg_name)
-        if arg_type == "bool" and val == '':
-            return arg_type, arg_name, True
+    def _convert_str_to_arg_type(self, arg):
         try:
-            arg_val = eval(arg_type)(val)
+            if self._schema.get_type(arg) == 'bool':
+                if self._command.get_value(arg) is None:
+                    return True
+                else:
+                    return bool(self._command.get_value(arg))
+            elif self._schema.get_type(arg) == 'int':
+                return int(self._command.get_value(arg))
+            else:
+                return self._command.get_value(arg)
         except ValueError:
-            raise TypeError("argument {} should be {}".format(arg_name, arg_type))
-        return arg_type, arg_name, arg_val
+            print("please check type of %s" % arg)
 
     def get_args(self, arg):
-        return self.args_dict[arg]
+        res = self._convert_str_to_arg_type(arg)
+        return res
 
-    def parse(self, args_as_text):
-        args_as_list = args_as_text.split("-")
-        args_as_list.remove("")
-        for arg in args_as_list:
-            print(arg)
-            arg_type, arg_name, arg_val = self._check_arg_type(arg.strip())
-            self.args_dict[arg_name] = arg_val
+
+class Command(object):
+    def __init__(self, command_line):
+        self.arg_dict = {}
+        command_iter = iter(re.split(r"\s+", command_line))
+        try:
+            while True:
+                arg = next(command_iter)[1]
+                previous, command = copy.deepcopy(command_iter), next(command_iter)
+                if self._is_value(command):
+                    self.arg_dict[arg] = command
+                else:
+                    command_iter = previous
+        except StopIteration:
+            pass
+
+    def get_value(self, arg):
+        return self.arg_dict.get(arg, None)
+
+    @staticmethod
+    def _is_value(command):
+        if command[0] != '-':
+            return True
+        elif "0" <= command[1] <= "9":
+            return True
+        else:
+            return False
 
 
 class Schema(object):
