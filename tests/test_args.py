@@ -9,8 +9,6 @@ class MyTestCase(unittest.TestCase):
         cls.args_parser.schema = "l:bool p:int d:str"
 
     def test_get_args_value(self):
-        # TODO: check value
-        # self.args_parser.parse(args_as_text)
         self.assertEqual(True, self.args_parser.get_args("l"))
         self.assertEqual(8080, self.args_parser.get_args("p"))
         self.assertEqual("/usr/logs", self.args_parser.get_args("d"))
